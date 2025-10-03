@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rápido Rápido ⏱️
 
-## Getting Started
+Una aplicación web móvil para medir el tiempo de actividades diarias con estadísticas y gráficas.
 
-First, run the development server:
+## 🚀 Características
+
+- ✅ Crear actividades personalizadas con emojis
+- ✅ Crear recorridos de actividades
+- ✅ Cronómetro en tiempo real para recorridos
+- ✅ Estadísticas detalladas con gráficas
+- ✅ Diseño mobile-first colorido y cartoon
+- ✅ Base de datos persistente con Vercel KV
+
+## 🛠️ Tecnologías
+
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Base de datos**: Vercel KV (Redis)
+- **Deploy**: Vercel
+
+## 📱 Configuración para Producción
+
+### 1. Configurar Vercel KV
+
+1. Ve a tu proyecto en [Vercel Dashboard](https://vercel.com/dashboard)
+2. Ve a la pestaña **Storage**
+3. Haz clic en **Create Database** y selecciona **KV**
+4. Conecta la base de datos a tu proyecto
+5. Las variables de entorno se configurarán automáticamente
+
+### 2. Variables de Entorno
+
+Vercel configurará automáticamente estas variables:
+- `KV_REST_API_URL`
+- `KV_REST_API_TOKEN`
+- `KV_REST_API_READ_ONLY_TOKEN`
+
+### 3. Deploy
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Instalar dependencias
+npm install
+
+# Build para producción
+npm run build
+
+# Deploy a Vercel
+vercel --prod
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏗️ Estructura del Proyecto
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+├── app/
+│   ├── api/                 # API Routes
+│   │   ├── activities/      # CRUD de actividades
+│   │   ├── routines/        # CRUD de recorridos
+│   │   └── completed-routines/ # Historial de recorridos
+│   └── page.tsx            # Página principal
+├── lib/
+│   └── db.ts              # Funciones de base de datos
+└── next.config.ts         # Configuración de Next.js
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎯 Uso
 
-## Learn More
+1. **Crear Actividades**: Define actividades como "Lavarme los dientes" 🦷
+2. **Crear Recorridos**: Combina actividades en rutinas como "Rutina matutina"
+3. **Ejecutar Recorridos**: Inicia cronómetros y marca el progreso
+4. **Ver Estadísticas**: Analiza tiempos, medias y tendencias
 
-To learn more about Next.js, take a look at the following resources:
+## 🔧 Desarrollo Local
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Clonar repositorio
+git clone <tu-repo>
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Instalar dependencias
+npm install
 
-## Deploy on Vercel
+# Ejecutar en desarrollo
+npm run dev
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Abrir en http://localhost:3000
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📊 Base de Datos
+
+La aplicación usa **Vercel KV** (Redis) para almacenar:
+- **Actividades**: Nombre, emoji, ID
+- **Recorridos**: Nombre, actividades, emoji, ID
+- **Historial**: Tiempos completados, fechas, estadísticas
+
+## 🎨 Diseño
+
+- **Mobile-first**: Optimizado para dispositivos móviles
+- **Cartoon**: Emojis grandes y colores vibrantes
+- **Gradientes**: Fondos coloridos y efectos visuales
+- **Touch-friendly**: Botones grandes y áreas de toque optimizadas
+
+## 🚀 Deploy en Vercel
+
+1. Conecta tu repositorio GitHub a Vercel
+2. Configura Vercel KV en el dashboard
+3. Deploy automático en cada push a main
+
+¡Listo! Tu aplicación estará disponible en `https://tu-proyecto.vercel.app`

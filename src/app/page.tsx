@@ -49,33 +49,59 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<ViewMode>('home');
   const [selectedRoutineForStats, setSelectedRoutineForStats] = useState<string>('');
 
-  const handleCreateActivity = () => {
+  const handleCreateActivity = async () => {
     if (newActivityName.trim()) {
-      const newActivity: Activity = {
-        id: Date.now().toString(),
-        name: newActivityName.trim(),
-        emoji: newActivityEmoji,
-      };
-      setActivities([...activities, newActivity]);
-      setNewActivityName('');
-      setNewActivityEmoji('⏰');
-      setShowActivityForm(false);
+      try {
+        const response = await fetch('/api/activities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: newActivityName.trim(),
+            emoji: newActivityEmoji,
+          }),
+        });
+        
+        if (response.ok) {
+          const newActivity = await response.json();
+          setActivities([...activities, newActivity]);
+          setNewActivityName('');
+          setNewActivityEmoji('⏰');
+          setShowActivityForm(false);
+        }
+      } catch (error) {
+        console.error('Error creating activity:', error);
+      }
     }
   };
 
-  const handleCreateRoutine = () => {
+  const handleCreateRoutine = async () => {
     if (newRoutineName.trim() && selectedActivities.length > 0) {
-      const newRoutine: Routine = {
-        id: Date.now().toString(),
-        name: newRoutineName.trim(),
-        activities: selectedActivities,
-        emoji: newRoutineEmoji,
-      };
-      setRoutines([...routines, newRoutine]);
-      setNewRoutineName('');
-      setNewRoutineEmoji('🔄');
-      setSelectedActivities([]);
-      setShowRoutineForm(false);
+      try {
+        const response = await fetch('/api/routines', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: newRoutineName.trim(),
+            activities: selectedActivities,
+            emoji: newRoutineEmoji,
+          }),
+        });
+        
+        if (response.ok) {
+          const newRoutine = await response.json();
+          setRoutines([...routines, newRoutine]);
+          setNewRoutineName('');
+          setNewRoutineEmoji('🔄');
+          setSelectedActivities([]);
+          setShowRoutineForm(false);
+        }
+      } catch (error) {
+        console.error('Error creating routine:', error);
+      }
     }
   };
 
@@ -133,6 +159,20 @@ export default function Home() {
         totalTime: Date.now() - activeRoutine.startTime,
         stageTimes: newActiveRoutine.stageTimes
       };
+      
+      // Guardar en la base de datos
+      try {
+        await fetch('/api/completed-routines', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(completedRoutine),
+        });
+      } catch (error) {
+        console.error('Error saving completed routine:', error);
+      }
+      
       setCompletedRoutines(prev => [...prev, completedRoutine]);
       
       setTimeout(() => {
@@ -186,6 +226,38 @@ export default function Home() {
 
     return stats;
   };
+
+  // Load data on component mount
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load activities
+        const activitiesResponse = await fetch('/api/activities');
+        if (activitiesResponse.ok) {
+          const activitiesData = await activitiesResponse.json();
+          setActivities(activitiesData);
+        }
+
+        // Load routines
+        const routinesResponse = await fetch('/api/routines');
+        if (routinesResponse.ok) {
+          const routinesData = await routinesResponse.json();
+          setRoutines(routinesData);
+        }
+
+        // Load completed routines
+        const completedRoutinesResponse = await fetch('/api/completed-routines');
+        if (completedRoutinesResponse.ok) {
+          const completedRoutinesData = await completedRoutinesResponse.json();
+          setCompletedRoutines(completedRoutinesData);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Timer effect
   React.useEffect(() => {
