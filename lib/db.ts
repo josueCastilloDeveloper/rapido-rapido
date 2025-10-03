@@ -22,7 +22,7 @@ export interface CompletedRoutine {
 }
 
 // In-memory storage for development when KV is not configured
-let memoryStorage: {
+const memoryStorage: {
   activities: Activity[];
   routines: Routine[];
   completedRoutines: CompletedRoutine[];
