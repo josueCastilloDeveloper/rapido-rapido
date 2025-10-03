@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCompletedRoutines, saveCompletedRoutine } from '@/lib/db';
+import { getCompletedRoutines, saveCompletedRoutine } from '../../../lib/db';
 
 export async function GET() {
   try {
     const completedRoutines = await getCompletedRoutines();
     return NextResponse.json(completedRoutines);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch completed routines' }, { status: 500 });
   }
 }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     
     await saveCompletedRoutine(completedRoutine);
     return NextResponse.json(completedRoutine);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save completed routine' }, { status: 500 });
   }
 }

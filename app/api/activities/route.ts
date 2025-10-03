@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActivities, saveActivity } from '@/lib/db';
+import { getActivities, saveActivity } from '../../../lib/db';
 
 export async function GET() {
   try {
     const activities = await getActivities();
     return NextResponse.json(activities);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
   }
 }
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     
     await saveActivity(activity);
     return NextResponse.json(activity);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save activity' }, { status: 500 });
   }
 }

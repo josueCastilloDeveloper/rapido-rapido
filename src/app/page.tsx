@@ -127,7 +127,7 @@ export default function Home() {
     }
   };
 
-  const completeCurrentActivity = () => {
+  const completeCurrentActivity = async () => {
     if (!activeRoutine) return;
     
     const routine = routines.find(r => r.id === activeRoutine.routineId);
@@ -512,7 +512,7 @@ export default function Home() {
                         {formatTime(currentTime)}
                       </div>
                       <div className="space-y-2 mb-6">
-                        {routine.activities.map((activityId, index) => {
+                        {routine.activities.map((activityId) => {
                           const activity = activities.find(a => a.id === activityId);
                           const duration = activeRoutine.stageTimes[activityId];
                           return activity ? (
@@ -726,7 +726,7 @@ export default function Home() {
                       📈 Tiempos por Actividad
                     </h3>
                     <div className="space-y-4">
-                      {stats.activityStats.map((activityStat, index) => (
+                      {stats.activityStats.map((activityStat) => (
                         <div key={activityStat.activityId} className="bg-gray-50 rounded-xl p-4">
                           <div className="flex items-center mb-3">
                             <span className="text-2xl mr-3">{activityStat.activityEmoji}</span>
