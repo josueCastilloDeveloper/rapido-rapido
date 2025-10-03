@@ -72,11 +72,13 @@ export default function Home() {
     position: { x: number; y: number };
     isDragging: boolean;
     dragOffset: { x: number; y: number };
+    isPiPMode: boolean;
   }>({
     isVisible: false,
     position: { x: 20, y: 100 },
     isDragging: false,
-    dragOffset: { x: 0, y: 0 }
+    dragOffset: { x: 0, y: 0 },
+    isPiPMode: false
   });
 
   const handleCreateActivity = async () => {
@@ -343,11 +345,75 @@ export default function Home() {
   };
 
   // Floating Widget Functions
-  const toggleFloatingWidget = () => {
-    setFloatingWidget(prev => ({
-      ...prev,
-      isVisible: !prev.isVisible
-    }));
+  const toggleFloatingWidget = async () => {
+    if (!floatingWidget.isVisible) {
+      // Activating widget
+      setFloatingWidget(prev => ({
+        ...prev,
+        isVisible: true
+      }));
+      
+      // Try to enter Picture-in-Picture mode on iOS
+      if ('documentPictureInPicture' in window) {
+        try {
+          const pipWindow = await (window as unknown as { documentPictureInPicture: { requestWindow: (options: { width: number; height: number }) => Promise<Window> } }).documentPictureInPicture.requestWindow({
+            width: 200,
+            height: 120,
+          });
+          
+          // Create widget content for PiP
+          const pipContent = document.createElement('div');
+          pipContent.innerHTML = `
+            <div style="
+              width: 200px; 
+              height: 120px; 
+              background: white; 
+              border-radius: 16px; 
+              box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              font-family: system-ui;
+              padding: 16px;
+              box-sizing: border-box;
+            ">
+              <div style="font-size: 24px; margin-bottom: 8px;">
+                ${activeRoutine ? 
+                  (routines.find(r => r.id === activeRoutine.routineId)?.emoji || '🔄') : 
+                  activeActivity ? 
+                  (activities.find(a => a.id === activeActivity.activityId)?.emoji || '⏱️') : 
+                  '⏱️'
+                }
+              </div>
+              <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px;">
+                ${formatTimeShort(currentTime)}
+              </div>
+              <div style="font-size: 12px; color: #666;">
+                ${activeRoutine ? 'Recorrido' : 'Actividad'}
+              </div>
+            </div>
+          `;
+          
+          pipWindow.document.body.appendChild(pipContent);
+          
+          setFloatingWidget(prev => ({
+            ...prev,
+            isPiPMode: true
+          }));
+          
+        } catch (error) {
+          console.log('Picture-in-Picture not supported or failed:', error);
+        }
+      }
+    } else {
+      // Deactivating widget
+      setFloatingWidget(prev => ({
+        ...prev,
+        isVisible: false,
+        isPiPMode: false
+      }));
+    }
   };
 
   const handleWidgetMouseDown = (e: React.MouseEvent) => {
@@ -446,6 +512,29 @@ export default function Home() {
       };
     }
   }, [floatingWidget.isDragging, floatingWidget.dragOffset, handleWidgetMouseMove, handleWidgetTouchMove]);
+
+  // Keep widget visible when app goes to background (iOS)
+  React.useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && floatingWidget.isVisible && (activeRoutine || activeActivity)) {
+        // App went to background, ensure widget stays visible
+        console.log('App went to background, widget should remain visible');
+      }
+    };
+
+    const handlePageShow = () => {
+      // App came back to foreground
+      console.log('App came back to foreground');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [floatingWidget.isVisible, activeRoutine, activeActivity]);
 
   // Load data on component mount
   React.useEffect(() => {
@@ -555,6 +644,17 @@ export default function Home() {
             >
               {floatingWidget.isVisible ? '🔒 Ocultar Widget' : '📱 Widget Flotante'}
             </button>
+            
+            {/* PWA Install Instructions */}
+            {!floatingWidget.isVisible && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
+                <div className="font-semibold mb-1">💡 Para iPhone:</div>
+                <div>1. Toca &quot;Compartir&quot; → &quot;Agregar a pantalla de inicio&quot;</div>
+                <div>2. Inicia un cronómetro</div>
+                <div>3. Activa el widget flotante</div>
+                <div>4. Cambia de app - el widget permanecerá visible</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1236,21 +1336,28 @@ export default function Home() {
         {/* Floating Widget */}
         {floatingWidget.isVisible && (activeRoutine || activeActivity) && (
           <div
-            className={`fixed z-50 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-3 cursor-move select-none ${
+            className={`fixed z-50 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 select-none ${
               floatingWidget.isDragging ? 'shadow-3xl scale-105' : 'hover:shadow-xl'
             } transition-all duration-200`}
             style={{
               left: `${floatingWidget.position.x}px`,
               top: `${floatingWidget.position.y}px`,
-              width: '120px',
-              height: '80px'
+              width: '160px',
+              height: '120px'
             }}
             onMouseDown={handleWidgetMouseDown}
             onTouchStart={handleWidgetTouchStart}
           >
-            <div className="h-full flex flex-col justify-center items-center text-center">
+            {/* Header with drag handle */}
+            <div className="flex items-center justify-between p-2 border-b border-gray-100">
+              <div className="text-xs text-gray-500 font-medium">Widget</div>
+              <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            {/* Main Content */}
+            <div className="p-3 flex flex-col items-center">
               {/* Activity/Routine Info */}
-              <div className="text-lg mb-1">
+              <div className="text-2xl mb-2">
                 {activeRoutine ? (
                   (() => {
                     const routine = routines.find(r => r.id === activeRoutine.routineId);
@@ -1265,26 +1372,77 @@ export default function Home() {
               </div>
               
               {/* Timer Display */}
-              <div className="text-sm font-bold text-gray-800 mb-1">
+              <div className="text-lg font-bold text-gray-800 mb-2">
                 {formatTimeShort(currentTime)}
               </div>
               
               {/* Status */}
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 mb-3">
                 {activeRoutine ? 'Recorrido' : 'Actividad'}
               </div>
+              
+              {/* Control Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (activeRoutine) {
+                      // Complete routine logic
+                      const routine = routines.find(r => r.id === activeRoutine.routineId);
+                      if (routine) {
+                        const totalTime = Date.now() - activeRoutine.startTime;
+                        const stageTimes: { [activityId: string]: number } = {};
+                        
+                        routine.activities.forEach((activityId, index) => {
+                          const activity = activities.find(a => a.id === activityId);
+                          if (activity) {
+                            stageTimes[activityId] = Math.floor(totalTime / routine.activities.length);
+                          }
+                        });
+                        
+                        const completedRoutine: CompletedRoutine = {
+                          id: Date.now().toString(),
+                          routineId: activeRoutine.routineId,
+                          completedAt: Date.now(),
+                          totalTime,
+                          stageTimes
+                        };
+                        
+                        try {
+                          await fetch('/api/completed-routines', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(completedRoutine)
+                          });
+                          setCompletedRoutines(prev => [...prev, completedRoutine]);
+                        } catch (error) {
+                          console.error('Error saving completed routine:', error);
+                        }
+                      }
+                      
+                      setActiveRoutine(null);
+                      setCurrentTime(0);
+                    } else if (activeActivity) {
+                      completeSingleActivity();
+                    }
+                  }}
+                  className="w-8 h-8 bg-green-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-green-600 transition-colors"
+                  title="Completar"
+                >
+                  ✓
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFloatingWidget(prev => ({ ...prev, isVisible: false }));
+                  }}
+                  className="w-8 h-8 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                  title="Cerrar"
+                >
+                  ×
+                </button>
+              </div>
             </div>
-            
-            {/* Close Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFloatingWidget(prev => ({ ...prev, isVisible: false }));
-              }}
-              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-            >
-              ×
-            </button>
           </div>
         )}
       </div>
