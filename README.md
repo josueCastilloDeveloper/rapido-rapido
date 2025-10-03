@@ -99,8 +99,27 @@ La aplicación usa **Vercel KV** (Redis) para almacenar:
 
 ## 🚀 Deploy en Vercel
 
-1. Conecta tu repositorio GitHub a Vercel
-2. Configura Vercel KV en el dashboard
-3. Deploy automático en cada push a main
+### Pasos para Deploy:
+
+1. **Conectar repositorio**:
+   - Ve a [Vercel Dashboard](https://vercel.com/dashboard)
+   - Haz clic en "New Project"
+   - Conecta tu repositorio GitHub
+
+2. **Configurar Vercel KV**:
+   - En tu proyecto, ve a la pestaña "Storage"
+   - Haz clic en "Create Database" → "KV"
+   - Conecta la base de datos a tu proyecto
+
+3. **Deploy automático**:
+   - Vercel detectará automáticamente que es un proyecto Next.js
+   - El deploy se ejecutará automáticamente en cada push a main
+
+### Solución de Problemas:
+
+Si ves un error 404 en Vercel:
+- Verifica que el archivo `vercel.json` esté presente
+- Asegúrate de que `next.config.ts` no tenga `output: 'export'`
+- Las variables de entorno de KV se configuran automáticamente
 
 ¡Listo! Tu aplicación estará disponible en `https://tu-proyecto.vercel.app`
