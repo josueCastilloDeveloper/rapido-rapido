@@ -67,6 +67,17 @@ export default function Home() {
     } | null;
     message?: string;
   } | null>(null);
+  const [floatingWidget, setFloatingWidget] = useState<{
+    isVisible: boolean;
+    position: { x: number; y: number };
+    isDragging: boolean;
+    dragOffset: { x: number; y: number };
+  }>({
+    isVisible: false,
+    position: { x: 20, y: 100 },
+    isDragging: false,
+    dragOffset: { x: 0, y: 0 }
+  });
 
   const handleCreateActivity = async () => {
     if (newActivityName.trim()) {
@@ -331,6 +342,111 @@ export default function Home() {
     }
   };
 
+  // Floating Widget Functions
+  const toggleFloatingWidget = () => {
+    setFloatingWidget(prev => ({
+      ...prev,
+      isVisible: !prev.isVisible
+    }));
+  };
+
+  const handleWidgetMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setFloatingWidget(prev => ({
+      ...prev,
+      isDragging: true,
+      dragOffset: {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      }
+    }));
+  };
+
+  const handleWidgetTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    setFloatingWidget(prev => ({
+      ...prev,
+      isDragging: true,
+      dragOffset: {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      }
+    }));
+  };
+
+  const handleWidgetMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!floatingWidget.isDragging) return;
+    
+    const newX = e.clientX - floatingWidget.dragOffset.x;
+    const newY = e.clientY - floatingWidget.dragOffset.y;
+    
+    // Keep widget within viewport bounds
+    const maxX = window.innerWidth - 120; // widget width
+    const maxY = window.innerHeight - 80; // widget height
+    
+    setFloatingWidget(prev => ({
+      ...prev,
+      position: {
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      }
+    }));
+  }, [floatingWidget.isDragging, floatingWidget.dragOffset]);
+
+  const handleWidgetTouchMove = React.useCallback((e: TouchEvent) => {
+    if (!floatingWidget.isDragging) return;
+    
+    const touch = e.touches[0];
+    const newX = touch.clientX - floatingWidget.dragOffset.x;
+    const newY = touch.clientY - floatingWidget.dragOffset.y;
+    
+    // Keep widget within viewport bounds
+    const maxX = window.innerWidth - 120; // widget width
+    const maxY = window.innerHeight - 80; // widget height
+    
+    setFloatingWidget(prev => ({
+      ...prev,
+      position: {
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      }
+    }));
+  }, [floatingWidget.isDragging, floatingWidget.dragOffset]);
+
+  const handleWidgetMouseUp = () => {
+    setFloatingWidget(prev => ({
+      ...prev,
+      isDragging: false
+    }));
+  };
+
+  const handleWidgetTouchEnd = () => {
+    setFloatingWidget(prev => ({
+      ...prev,
+      isDragging: false
+    }));
+  };
+
+  // Add event listeners for dragging
+  React.useEffect(() => {
+    if (floatingWidget.isDragging) {
+      document.addEventListener('mousemove', handleWidgetMouseMove);
+      document.addEventListener('mouseup', handleWidgetMouseUp);
+      document.addEventListener('touchmove', handleWidgetTouchMove, { passive: false });
+      document.addEventListener('touchend', handleWidgetTouchEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleWidgetMouseMove);
+        document.removeEventListener('mouseup', handleWidgetMouseUp);
+        document.removeEventListener('touchmove', handleWidgetTouchMove);
+        document.removeEventListener('touchend', handleWidgetTouchEnd);
+      };
+    }
+  }, [floatingWidget.isDragging, floatingWidget.dragOffset, handleWidgetMouseMove, handleWidgetTouchMove]);
+
   // Load data on component mount
   React.useEffect(() => {
     const loadData = async () => {
@@ -394,36 +510,50 @@ export default function Home() {
           </p>
           
           {/* Navigation */}
-          <div className="flex bg-white rounded-2xl p-1 shadow-lg">
+          <div className="space-y-3">
+            <div className="flex bg-white rounded-2xl p-1 shadow-lg">
+              <button
+                onClick={() => setCurrentView('home')}
+                className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
+                  currentView === 'home' 
+                    ? 'bg-gradient-to-r from-pink-400 to-pink-600 text-white shadow-lg' 
+                    : 'text-gray-600 active:bg-gray-100'
+                }`}
+              >
+                🏠 Inicio
+              </button>
+              <button
+                onClick={() => setCurrentView('stats')}
+                className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
+                  currentView === 'stats' 
+                    ? 'bg-gradient-to-r from-purple-400 to-purple-600 text-white shadow-lg' 
+                    : 'text-gray-600 active:bg-gray-100'
+                }`}
+              >
+                📊 Recorridos
+              </button>
+              <button
+                onClick={() => setCurrentView('activity-stats')}
+                className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
+                  currentView === 'activity-stats' 
+                    ? 'bg-gradient-to-r from-blue-400 to-blue-600 text-white shadow-lg' 
+                    : 'text-gray-600 active:bg-gray-100'
+                }`}
+              >
+                ⏱️ Actividades
+              </button>
+            </div>
+            
+            {/* Floating Widget Toggle */}
             <button
-              onClick={() => setCurrentView('home')}
-              className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
-                currentView === 'home' 
-                  ? 'bg-gradient-to-r from-pink-400 to-pink-600 text-white shadow-lg' 
-                  : 'text-gray-600 active:bg-gray-100'
+              onClick={toggleFloatingWidget}
+              className={`w-full py-3 px-4 rounded-xl font-medium transition-all text-sm shadow-lg ${
+                floatingWidget.isVisible
+                  ? 'bg-gradient-to-r from-green-400 to-green-600 text-white'
+                  : 'bg-white text-gray-600 active:bg-gray-100'
               }`}
             >
-              🏠 Inicio
-            </button>
-            <button
-              onClick={() => setCurrentView('stats')}
-              className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
-                currentView === 'stats' 
-                  ? 'bg-gradient-to-r from-purple-400 to-purple-600 text-white shadow-lg' 
-                  : 'text-gray-600 active:bg-gray-100'
-              }`}
-            >
-              📊 Recorridos
-            </button>
-            <button
-              onClick={() => setCurrentView('activity-stats')}
-              className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
-                currentView === 'activity-stats' 
-                  ? 'bg-gradient-to-r from-blue-400 to-blue-600 text-white shadow-lg' 
-                  : 'text-gray-600 active:bg-gray-100'
-              }`}
-            >
-              ⏱️ Actividades
+              {floatingWidget.isVisible ? '🔒 Ocultar Widget' : '📱 Widget Flotante'}
             </button>
           </div>
         </div>
@@ -1100,6 +1230,61 @@ export default function Home() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Floating Widget */}
+        {floatingWidget.isVisible && (activeRoutine || activeActivity) && (
+          <div
+            className={`fixed z-50 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-3 cursor-move select-none ${
+              floatingWidget.isDragging ? 'shadow-3xl scale-105' : 'hover:shadow-xl'
+            } transition-all duration-200`}
+            style={{
+              left: `${floatingWidget.position.x}px`,
+              top: `${floatingWidget.position.y}px`,
+              width: '120px',
+              height: '80px'
+            }}
+            onMouseDown={handleWidgetMouseDown}
+            onTouchStart={handleWidgetTouchStart}
+          >
+            <div className="h-full flex flex-col justify-center items-center text-center">
+              {/* Activity/Routine Info */}
+              <div className="text-lg mb-1">
+                {activeRoutine ? (
+                  (() => {
+                    const routine = routines.find(r => r.id === activeRoutine.routineId);
+                    return routine ? routine.emoji : '🔄';
+                  })()
+                ) : activeActivity ? (
+                  (() => {
+                    const activity = activities.find(a => a.id === activeActivity.activityId);
+                    return activity ? activity.emoji : '⏱️';
+                  })()
+                ) : '⏱️'}
+              </div>
+              
+              {/* Timer Display */}
+              <div className="text-sm font-bold text-gray-800 mb-1">
+                {formatTimeShort(currentTime)}
+              </div>
+              
+              {/* Status */}
+              <div className="text-xs text-gray-500">
+                {activeRoutine ? 'Recorrido' : 'Actividad'}
+              </div>
+            </div>
+            
+            {/* Close Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFloatingWidget(prev => ({ ...prev, isVisible: false }));
+              }}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+            >
+              ×
+            </button>
           </div>
         )}
       </div>
