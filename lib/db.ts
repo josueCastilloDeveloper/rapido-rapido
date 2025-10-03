@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
 
 export interface Activity {
   id: string;
@@ -32,20 +32,36 @@ const memoryStorage: {
   completedRoutines: []
 };
 
-// Check if KV is properly configured
-const isKVConfigured = () => {
-  return process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+// Redis client setup
+let redisClient: ReturnType<typeof createClient> | null = null;
+
+const getRedisClient = async () => {
+  if (!redisClient) {
+    if (process.env.REDIS_URL) {
+      redisClient = createClient({ url: process.env.REDIS_URL });
+      await redisClient.connect();
+    } else {
+      throw new Error('Redis URL not configured');
+    }
+  }
+  return redisClient;
+};
+
+// Check if Redis is properly configured
+const isRedisConfigured = () => {
+  return !!process.env.REDIS_URL;
 };
 
 // Activities
 export async function getActivities(): Promise<Activity[]> {
-  if (!isKVConfigured()) {
+  if (!isRedisConfigured()) {
     return memoryStorage.activities;
   }
   
   try {
-    const activities = await kv.get<Activity[]>('activities') || [];
-    return activities;
+    const client = await getRedisClient();
+    const activitiesJson = await client.get('activities');
+    return activitiesJson ? JSON.parse(activitiesJson) : [];
   } catch (error) {
     console.error('Error getting activities:', error);
     return memoryStorage.activities;
@@ -53,7 +69,7 @@ export async function getActivities(): Promise<Activity[]> {
 }
 
 export async function saveActivity(activity: Activity): Promise<void> {
-  if (!isKVConfigured()) {
+  if (!isRedisConfigured()) {
     memoryStorage.activities.push(activity);
     return;
   }
@@ -61,7 +77,8 @@ export async function saveActivity(activity: Activity): Promise<void> {
   try {
     const activities = await getActivities();
     activities.push(activity);
-    await kv.set('activities', activities);
+    const client = await getRedisClient();
+    await client.set('activities', JSON.stringify(activities));
   } catch (error) {
     console.error('Error saving activity:', error);
     memoryStorage.activities.push(activity);
@@ -70,13 +87,14 @@ export async function saveActivity(activity: Activity): Promise<void> {
 
 // Routines
 export async function getRoutines(): Promise<Routine[]> {
-  if (!isKVConfigured()) {
+  if (!isRedisConfigured()) {
     return memoryStorage.routines;
   }
   
   try {
-    const routines = await kv.get<Routine[]>('routines') || [];
-    return routines;
+    const client = await getRedisClient();
+    const routinesJson = await client.get('routines');
+    return routinesJson ? JSON.parse(routinesJson) : [];
   } catch (error) {
     console.error('Error getting routines:', error);
     return memoryStorage.routines;
@@ -84,7 +102,7 @@ export async function getRoutines(): Promise<Routine[]> {
 }
 
 export async function saveRoutine(routine: Routine): Promise<void> {
-  if (!isKVConfigured()) {
+  if (!isRedisConfigured()) {
     memoryStorage.routines.push(routine);
     return;
   }
@@ -92,7 +110,8 @@ export async function saveRoutine(routine: Routine): Promise<void> {
   try {
     const routines = await getRoutines();
     routines.push(routine);
-    await kv.set('routines', routines);
+    const client = await getRedisClient();
+    await client.set('routines', JSON.stringify(routines));
   } catch (error) {
     console.error('Error saving routine:', error);
     memoryStorage.routines.push(routine);
@@ -101,13 +120,14 @@ export async function saveRoutine(routine: Routine): Promise<void> {
 
 // Completed Routines
 export async function getCompletedRoutines(): Promise<CompletedRoutine[]> {
-  if (!isKVConfigured()) {
+  if (!isRedisConfigured()) {
     return memoryStorage.completedRoutines;
   }
   
   try {
-    const completedRoutines = await kv.get<CompletedRoutine[]>('completedRoutines') || [];
-    return completedRoutines;
+    const client = await getRedisClient();
+    const completedRoutinesJson = await client.get('completedRoutines');
+    return completedRoutinesJson ? JSON.parse(completedRoutinesJson) : [];
   } catch (error) {
     console.error('Error getting completed routines:', error);
     return memoryStorage.completedRoutines;
@@ -115,7 +135,7 @@ export async function getCompletedRoutines(): Promise<CompletedRoutine[]> {
 }
 
 export async function saveCompletedRoutine(completedRoutine: CompletedRoutine): Promise<void> {
-  if (!isKVConfigured()) {
+  if (!isRedisConfigured()) {
     memoryStorage.completedRoutines.push(completedRoutine);
     return;
   }
@@ -123,7 +143,8 @@ export async function saveCompletedRoutine(completedRoutine: CompletedRoutine): 
   try {
     const completedRoutines = await getCompletedRoutines();
     completedRoutines.push(completedRoutine);
-    await kv.set('completedRoutines', completedRoutines);
+    const client = await getRedisClient();
+    await client.set('completedRoutines', JSON.stringify(completedRoutines));
   } catch (error) {
     console.error('Error saving completed routine:', error);
     memoryStorage.completedRoutines.push(completedRoutine);
