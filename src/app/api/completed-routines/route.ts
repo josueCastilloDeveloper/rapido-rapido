@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCompletedRoutines, saveCompletedRoutine } from '../../../lib/db';
+import { getCompletedRoutines, saveCompletedRoutine } from '../../../../lib/db';
 
 export async function GET() {
   try {

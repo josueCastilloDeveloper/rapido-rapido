@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRoutines, saveRoutine } from '../../../lib/db';
+import { getRoutines, saveRoutine } from '../../../../lib/db';
 
 export async function GET() {
   try {

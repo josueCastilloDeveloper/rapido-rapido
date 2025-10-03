@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActivities, saveActivity } from '../../../lib/db';
+import { getActivities, saveActivity } from '../../../../lib/db';
 
 export async function GET() {
   try {
