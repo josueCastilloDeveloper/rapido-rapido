@@ -36,7 +36,7 @@ interface CompletedRoutine {
   stageTimes: { [activityId: string]: number };
 }
 
-type ViewMode = 'home' | 'stats';
+type ViewMode = 'home' | 'stats' | 'activity-stats';
 
 export default function Home() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -54,6 +54,19 @@ export default function Home() {
   const [completedRoutines, setCompletedRoutines] = useState<CompletedRoutine[]>([]);
   const [currentView, setCurrentView] = useState<ViewMode>('home');
   const [selectedRoutineForStats, setSelectedRoutineForStats] = useState<string>('');
+  const [selectedActivityForStats, setSelectedActivityForStats] = useState<string>('');
+  const [activityStats, setActivityStats] = useState<{
+    activity: Activity;
+    stats: {
+      totalRuns: number;
+      averageTime: number;
+      bestTime: number;
+      worstTime: number;
+      times: number[];
+      recentTimes: number[];
+    } | null;
+    message?: string;
+  } | null>(null);
 
   const handleCreateActivity = async () => {
     if (newActivityName.trim()) {
@@ -306,6 +319,18 @@ export default function Home() {
     return stats;
   };
 
+  const loadActivityStats = async (activityId: string) => {
+    try {
+      const response = await fetch(`/api/activity-stats?activityId=${activityId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setActivityStats(data);
+      }
+    } catch (error) {
+      console.error('Error loading activity stats:', error);
+    }
+  };
+
   // Load data on component mount
   React.useEffect(() => {
     const loadData = async () => {
@@ -372,7 +397,7 @@ export default function Home() {
           <div className="flex bg-white rounded-2xl p-1 shadow-lg">
             <button
               onClick={() => setCurrentView('home')}
-              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+              className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
                 currentView === 'home' 
                   ? 'bg-gradient-to-r from-pink-400 to-pink-600 text-white shadow-lg' 
                   : 'text-gray-600 active:bg-gray-100'
@@ -382,13 +407,23 @@ export default function Home() {
             </button>
             <button
               onClick={() => setCurrentView('stats')}
-              className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all ${
+              className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
                 currentView === 'stats' 
                   ? 'bg-gradient-to-r from-purple-400 to-purple-600 text-white shadow-lg' 
                   : 'text-gray-600 active:bg-gray-100'
               }`}
             >
-              📊 Estadísticas
+              📊 Recorridos
+            </button>
+            <button
+              onClick={() => setCurrentView('activity-stats')}
+              className={`flex-1 py-3 px-2 rounded-xl font-medium transition-all text-sm ${
+                currentView === 'activity-stats' 
+                  ? 'bg-gradient-to-r from-blue-400 to-blue-600 text-white shadow-lg' 
+                  : 'text-gray-600 active:bg-gray-100'
+              }`}
+            >
+              ⏱️ Actividades
             </button>
           </div>
         </div>
@@ -941,6 +976,130 @@ export default function Home() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* Activity Stats View */}
+        {currentView === 'activity-stats' && (
+          <div className="space-y-6">
+            {/* Activity Selector */}
+            <div className="bg-white rounded-2xl p-5 shadow-lg">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
+                ⏱️ Selecciona una Actividad
+              </h2>
+              <div className="space-y-3">
+                {activities.map((activity) => (
+                  <button
+                    key={activity.id}
+                    onClick={() => {
+                      setSelectedActivityForStats(activity.id);
+                      loadActivityStats(activity.id);
+                    }}
+                    className={`w-full p-4 rounded-xl text-left transition-all touch-manipulation ${
+                      selectedActivityForStats === activity.id
+                        ? 'bg-gradient-to-r from-blue-100 to-blue-200 border-2 border-blue-400'
+                        : 'bg-gray-50 active:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <span className="text-2xl mr-3">{activity.emoji}</span>
+                      <div>
+                        <h3 className="font-semibold text-gray-800">{activity.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          Haz clic para ver estadísticas
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {activities.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-5xl mb-3">⏱️</div>
+                    <p className="text-gray-500 text-lg">¡Crea actividades para ver estadísticas!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Activity Statistics Display */}
+            {selectedActivityForStats && activityStats && (
+              <div className="space-y-4">
+                {activityStats.stats ? (
+                  <>
+                    {/* Overall Stats */}
+                    <div className="bg-white rounded-2xl p-5 shadow-lg">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+                        📊 Estadísticas de {activityStats.activity.name}
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-r from-green-100 to-green-200 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-bold text-green-600">{activityStats.stats.totalRuns}</div>
+                          <div className="text-sm text-gray-600">Ejecuciones</div>
+                        </div>
+                        <div className="bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-bold text-blue-600">{formatTimeShort(activityStats.stats.averageTime)}</div>
+                          <div className="text-sm text-gray-600">Promedio</div>
+                        </div>
+                        <div className="bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-bold text-yellow-600">{formatTimeShort(activityStats.stats.bestTime)}</div>
+                          <div className="text-sm text-gray-600">Mejor</div>
+                        </div>
+                        <div className="bg-gradient-to-r from-red-100 to-red-200 rounded-xl p-4 text-center">
+                          <div className="text-2xl font-bold text-red-600">{formatTimeShort(activityStats.stats.worstTime)}</div>
+                          <div className="text-sm text-gray-600">Peor</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Time History */}
+                    <div className="bg-white rounded-2xl p-5 shadow-lg">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+                        📈 Historial de Tiempos
+                      </h3>
+                      <div className="space-y-3">
+                        {activityStats.stats.recentTimes.map((time: number, index: number) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
+                            <div className="flex items-center">
+                              <span className="text-lg mr-3">⏱️</span>
+                              <span className="text-sm text-gray-600">Ejecución {activityStats.stats!.times.length - index}</span>
+                            </div>
+                            <div className="text-lg font-bold text-blue-600">
+                              {formatTimeShort(time)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Progress Chart */}
+                    <div className="bg-white rounded-2xl p-5 shadow-lg">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">
+                        📊 Progreso Visual
+                      </h3>
+                      <div className="flex gap-1 justify-center">
+                        {activityStats.stats.recentTimes.map((time: number, timeIndex: number) => (
+                          <div
+                            key={timeIndex}
+                            className="bg-blue-400 rounded-sm transition-all duration-300"
+                            style={{
+                              width: '8px',
+                              height: `${Math.max(8, (time / Math.max(...activityStats.stats!.times)) * 40)}px`
+                            }}
+                            title={`Ejecución ${timeIndex + 1}: ${formatTimeShort(time)}`}
+                          ></div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
+                    <div className="text-5xl mb-4">📊</div>
+                    <p className="text-gray-500 text-lg">No hay datos suficientes para mostrar estadísticas</p>
+                    <p className="text-gray-400 text-sm mt-2">Usa el cronómetro individual para generar datos</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

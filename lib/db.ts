@@ -195,3 +195,25 @@ export async function getCompletedRoutinesForRoutine(routineId: string): Promise
     return [];
   }
 }
+
+// Get completed activities (individual activities)
+export async function getCompletedActivities(): Promise<CompletedRoutine[]> {
+  try {
+    const completedRoutines = await getCompletedRoutines();
+    return completedRoutines.filter(cr => cr.routineId === 'single-activity');
+  } catch (error) {
+    console.error('Error getting completed activities:', error);
+    return [];
+  }
+}
+
+// Get completed activities for a specific activity
+export async function getCompletedActivitiesForActivity(activityId: string): Promise<CompletedRoutine[]> {
+  try {
+    const completedActivities = await getCompletedActivities();
+    return completedActivities.filter(ca => ca.stageTimes[activityId]);
+  } catch (error) {
+    console.error('Error getting completed activities for activity:', error);
+    return [];
+  }
+}
