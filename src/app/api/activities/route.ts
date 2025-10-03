@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActivities, saveActivity } from '../../../../lib/db';
+import { getActivities, saveActivity, deleteActivity } from '../../../../lib/db';
 
 export async function GET() {
   try {
@@ -23,5 +23,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(activity);
   } catch {
     return NextResponse.json({ error: 'Failed to save activity' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const activityId = searchParams.get('id');
+    
+    if (!activityId) {
+      return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 });
+    }
+    
+    await deleteActivity(activityId);
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: 'Failed to delete activity' }, { status: 500 });
   }
 }

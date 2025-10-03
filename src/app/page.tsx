@@ -23,6 +23,11 @@ interface ActiveRoutine {
   stageTimes: { [activityId: string]: number };
 }
 
+interface ActiveActivity {
+  activityId: string;
+  startTime: number;
+}
+
 interface CompletedRoutine {
   id: string;
   routineId: string;
@@ -44,6 +49,7 @@ export default function Home() {
   const [newRoutineEmoji, setNewRoutineEmoji] = useState('🔄');
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [activeRoutine, setActiveRoutine] = useState<ActiveRoutine | null>(null);
+  const [activeActivity, setActiveActivity] = useState<ActiveActivity | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [completedRoutines, setCompletedRoutines] = useState<CompletedRoutine[]>([]);
   const [currentView, setCurrentView] = useState<ViewMode>('home');
@@ -197,6 +203,79 @@ export default function Home() {
     return `${minutes}m ${remainingSeconds}s`;
   };
 
+  // Delete functions
+  const handleDeleteActivity = async (activityId: string) => {
+    try {
+      const response = await fetch(`/api/activities?id=${activityId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setActivities(activities.filter(a => a.id !== activityId));
+        // Also remove from routines that contain this activity
+        setRoutines(routines.map(routine => ({
+          ...routine,
+          activities: routine.activities.filter(id => id !== activityId)
+        })));
+      }
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+    }
+  };
+
+  const handleDeleteRoutine = async (routineId: string) => {
+    try {
+      const response = await fetch(`/api/routines?id=${routineId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setRoutines(routines.filter(r => r.id !== routineId));
+      }
+    } catch (error) {
+      console.error('Error deleting routine:', error);
+    }
+  };
+
+  // Single activity timer functions
+  const startSingleActivity = (activityId: string) => {
+    setActiveActivity({
+      activityId,
+      startTime: Date.now()
+    });
+    setCurrentTime(0);
+  };
+
+  const completeSingleActivity = async () => {
+    if (!activeActivity) return;
+    
+    const duration = Date.now() - activeActivity.startTime;
+    
+    // Save the completed activity time
+    try {
+      await fetch('/api/completed-routines', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: Date.now().toString(),
+          routineId: 'single-activity',
+          completedAt: Date.now(),
+          totalTime: duration,
+          stageTimes: { [activeActivity.activityId]: duration }
+        }),
+      });
+    } catch (error) {
+      console.error('Error saving completed activity:', error);
+    }
+    
+    setTimeout(() => {
+      setActiveActivity(null);
+      setCurrentTime(0);
+    }, 2000);
+  };
+
   const getRoutineStats = (routineId: string) => {
     const routine = routines.find(r => r.id === routineId);
     if (!routine) return null;
@@ -266,11 +345,15 @@ export default function Home() {
       interval = setInterval(() => {
         setCurrentTime(Date.now() - activeRoutine.startTime);
       }, 100);
+    } else if (activeActivity) {
+      interval = setInterval(() => {
+        setCurrentTime(Date.now() - activeActivity.startTime);
+      }, 100);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [activeRoutine]);
+  }, [activeRoutine, activeActivity]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 p-4">
@@ -474,9 +557,26 @@ export default function Home() {
           <div className="space-y-3">
             {activities.map((activity) => (
               <div key={activity.id} className="bg-white rounded-2xl p-5 shadow-lg active:shadow-xl transition-shadow touch-manipulation">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">{activity.emoji}</div>
-                  <h3 className="text-lg font-semibold text-gray-800">{activity.name}</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="text-3xl mr-4">{activity.emoji}</div>
+                    <h3 className="text-lg font-semibold text-gray-800">{activity.name}</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => startSingleActivity(activity.id)}
+                      disabled={activeRoutine !== null || activeActivity !== null}
+                      className="bg-gradient-to-r from-green-400 to-green-600 text-white font-bold py-2 px-3 rounded-xl text-sm shadow-lg active:scale-95 transition-all duration-150 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ⏱️
+                    </button>
+                    <button
+                      onClick={() => handleDeleteActivity(activity.id)}
+                      className="bg-gradient-to-r from-red-400 to-red-600 text-white font-bold py-2 px-3 rounded-xl text-sm shadow-lg active:scale-95 transition-all duration-150 touch-manipulation"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -582,6 +682,45 @@ export default function Home() {
           </div>
         )}
 
+        {/* Active Single Activity Timer */}
+        {activeActivity && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+              {(() => {
+                const activity = activities.find(a => a.id === activeActivity.activityId);
+                if (!activity) return null;
+                
+                return (
+                  <>
+                    <div className="text-center mb-6">
+                      <div className="text-4xl mb-3">{activity.emoji}</div>
+                      <h2 className="text-xl font-bold text-gray-800 mb-2">{activity.name}</h2>
+                      <div className="text-3xl font-bold text-green-600 mb-4">
+                        {formatTime(currentTime)}
+                      </div>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <div className="bg-gradient-to-r from-green-100 to-green-200 rounded-2xl p-4 text-center">
+                        <div className="text-4xl mb-2">⏱️</div>
+                        <h4 className="text-lg font-bold text-gray-800">Cronómetro Individual</h4>
+                        <p className="text-sm text-gray-600 mt-2">Midiendo tiempo de actividad</p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={completeSingleActivity}
+                      className="w-full py-4 px-6 bg-gradient-to-r from-green-400 to-green-600 text-white font-bold rounded-2xl text-lg shadow-lg active:scale-95 transition-all duration-150 touch-manipulation"
+                    >
+                      ✅ Completar Actividad
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
         {/* Routines List */}
         <div>
           <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
@@ -595,13 +734,21 @@ export default function Home() {
                     <div className="text-3xl mr-4">{routine.emoji}</div>
                     <h3 className="text-lg font-semibold text-gray-800">{routine.name}</h3>
                   </div>
-                  <button
-                    onClick={() => startRoutine(routine.id)}
-                    disabled={activeRoutine !== null}
-                    className="bg-gradient-to-r from-green-400 to-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm shadow-lg active:scale-95 transition-all duration-150 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    ▶️ Iniciar
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => startRoutine(routine.id)}
+                      disabled={activeRoutine !== null || activeActivity !== null}
+                      className="bg-gradient-to-r from-green-400 to-green-600 text-white font-bold py-2 px-4 rounded-xl text-sm shadow-lg active:scale-95 transition-all duration-150 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ▶️ Iniciar
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRoutine(routine.id)}
+                      className="bg-gradient-to-r from-red-400 to-red-600 text-white font-bold py-2 px-3 rounded-xl text-sm shadow-lg active:scale-95 transition-all duration-150 touch-manipulation"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2 ml-12">
                   {routine.activities.map((activityId) => {

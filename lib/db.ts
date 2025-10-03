@@ -85,6 +85,23 @@ export async function saveActivity(activity: Activity): Promise<void> {
   }
 }
 
+export async function deleteActivity(activityId: string): Promise<void> {
+  if (!isRedisConfigured()) {
+    memoryStorage.activities = memoryStorage.activities.filter(a => a.id !== activityId);
+    return;
+  }
+  
+  try {
+    const activities = await getActivities();
+    const filteredActivities = activities.filter(a => a.id !== activityId);
+    const client = await getRedisClient();
+    await client.set('activities', JSON.stringify(filteredActivities));
+  } catch (error) {
+    console.error('Error deleting activity:', error);
+    memoryStorage.activities = memoryStorage.activities.filter(a => a.id !== activityId);
+  }
+}
+
 // Routines
 export async function getRoutines(): Promise<Routine[]> {
   if (!isRedisConfigured()) {
@@ -115,6 +132,23 @@ export async function saveRoutine(routine: Routine): Promise<void> {
   } catch (error) {
     console.error('Error saving routine:', error);
     memoryStorage.routines.push(routine);
+  }
+}
+
+export async function deleteRoutine(routineId: string): Promise<void> {
+  if (!isRedisConfigured()) {
+    memoryStorage.routines = memoryStorage.routines.filter(r => r.id !== routineId);
+    return;
+  }
+  
+  try {
+    const routines = await getRoutines();
+    const filteredRoutines = routines.filter(r => r.id !== routineId);
+    const client = await getRedisClient();
+    await client.set('routines', JSON.stringify(filteredRoutines));
+  } catch (error) {
+    console.error('Error deleting routine:', error);
+    memoryStorage.routines = memoryStorage.routines.filter(r => r.id !== routineId);
   }
 }
 
